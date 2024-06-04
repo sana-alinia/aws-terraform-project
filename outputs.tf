@@ -23,3 +23,11 @@ output "region" {
 output "subnet_ids" {
   value = { for id in data.aws_subnets.default.ids : id => id }
 }
+
+output "gitlab_root_password" {
+  value = data.local_file.root_password.content
+}
+
+output "gitlab_access_token" {
+  value = data.local_file.access_token.content
+}

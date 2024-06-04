@@ -1,6 +1,6 @@
 resource "aws_instance" "gitlab_server" {
   ami                           = "ami-052984d1804039ba8"
-  instance_type                 = "t3a.large"
+  instance_type                 = "t3a.large" // "t2.micro"
   user_data_replace_on_change   = true
   subnet_id                     = element(data.aws_subnets.default.ids, 0)
   vpc_security_group_ids        = [aws_security_group.gitlab_sg.id, aws_security_group.allow_docker_ports.id]
