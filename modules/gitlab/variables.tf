@@ -1,41 +1,13 @@
-variable "region" {
-  description = "AWS region"
-  type        = string
-  default     = "eu-west-3"
-}
-
-variable "public_key_path" {
-  description = "Path to the public key to be used for the AWS key pair"
-  type        = string
-  default     = "~/.ssh/id_rsa.pub"
-}
-
-variable "private_key_path" {
-  description = "Path to the private key file for SSH access"
-  type        = string
-  default     = "./new-key-pair.pem"
-}
-
-variable "key_name" {
-  description = "The name of the key pair"
-  default     = "aliniacoding keypair"
-}
-
-variable "gitlab_hostname" {
-  description = "Host name for GitLab"
-  default     = "gitlab.aliniacoding.com"
-}
-
 variable "gitlab_base_url" {
   description = "The base URL of the GitLab instance"
   type        = string
-  default     = "ttps://13.36.144.156/api/v4/user"
+  default     = "https://13.36.144.156/api/v4/user"
 }
 
 variable "gitlab_token_path" {
   description = "The path to the file containing the GitLab personal access token"
   type        = string
-  default     = ""
+  default     = "glpat--9dwHM_ifMmfjMHf_F-p"
 }
 
 variable "project_name" {
@@ -47,7 +19,7 @@ variable "project_name" {
 variable "project_description" {
   description = "The description of the GitLab project"
   type        = string
-  default     = "Test project for aws terraform"
+  default     = "Test project for aws-terraform"
 }
 
 variable "visibility_level" {
@@ -61,4 +33,3 @@ variable "repository_url" {
   type        = string
   default     = "https://github.com/sanafe/notes-app-cicd"
 }
-

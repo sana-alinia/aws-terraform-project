@@ -20,17 +20,15 @@ resource "null_resource" "gitlab_setup" {
       "sudo docker run --detach --hostname ${var.gitlab_hostname} --env GITLAB_OMNIBUS_CONFIG=\"external_url 'http://${var.gitlab_hostname}'\" --publish 443:443 --publish 80:80 --publish 2222:22 --name gitlab --restart always --volume /srv/gitlab/config:/etc/gitlab --volume /srv/gitlab/logs:/var/log/gitlab --volume /srv/gitlab/data:/var/opt/gitlab --shm-size 256m gitlab/gitlab-ce:latest && echo 'GitLab container started' >> /home/ec2-user/script_log.txt 2>&1 || echo 'Failed to start GitLab container' >> /home/ec2-user/script_log.txt 2>&1",
       "chmod +x /home/ec2-user/docker-containers.sh",
       "sudo /home/ec2-user/docker-containers.sh",
-      "sleep 120",
+      "sleep 5",
       "ROOT_PASSWORD=$(sudo docker exec gitlab cat /etc/gitlab/initial_root_password | grep 'Password:' | awk '{print $2}')",
-      "echo $ROOT_PASSWORD > /home/ec2-user/root_password.txt",
-      "ACCESS_TOKEN=$(curl --request POST \"http://gitlab.${aws_instance.gitlab_server.public_ip}.com/api/v4/session\" --form \"login=root\" --form \"password=$ROOT_PASSWORD\" | jq -r '.private_token')",
-      "echo $ACCESS_TOKEN > /home/ec2-user/access_token.txt"
+      "echo $ROOT_PASSWORD > /home/ec2-user/root_password.txt"
     ]
   }
   provisioner "local-exec" {
     command = <<EOT
       scp -o StrictHostKeyChecking=no -i ${path.module}/new-key-pair.pem ec2-user@${aws_instance.gitlab_server.public_ip}:/home/ec2-user/root_password.txt ./root_password.txt
-      scp -o StrictHostKeyChecking=no -i ${path.module}/new-key-pair.pem ec2-user@${aws_instance.gitlab_server.public_ip}:/home/ec2-user/access_token.txt ./access_token.txt
+      # scp -o StrictHostKeyChecking=no -i ${path.module}/new-key-pair.pem ec2-user@${aws_instance.gitlab_server.public_ip}:/home/ec2-user/access_token.txt ./access_token.txt
     EOT
   }
 }
