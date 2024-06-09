@@ -62,3 +62,4 @@ variable "repository_url" {
   default     = "https://github.com/sanafe/notes-app-cicd"
 }
 
+
