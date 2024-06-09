@@ -33,3 +33,9 @@ variable "repository_url" {
   type        = string
   default     = "https://github.com/sanafe/notes-app-cicd"
 }
+
+variable "use_module_gitlab" {
+  description = "Set to true to use module gitlab, false to exclude it"
+  type        = bool
+  default     = true
+}
