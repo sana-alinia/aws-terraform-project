@@ -25,9 +25,13 @@ output "subnet_ids" {
 }
 
 output "gitlab_root_password" {
-  value = data.local_file.root_password.content
+  value = data.local_file.gitlab_root_password.content
 }
 
 output "gitlab_access_token" {
   value = data.local_file.access_token.content
+}
+
+output "jenkins_root_password" {
+  value = data.local_file.gitlab_root_password.content
 }

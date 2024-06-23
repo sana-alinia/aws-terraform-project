@@ -37,6 +37,16 @@ provider "gitlab" {
   token    = file(var.gitlab_token_path)
 }
 
+module "gitlab-server" {
+  ami                                 = "ami-052984d1804039ba8"
+  source                              = "./modules/gitlab-server"
+  instance_type                       = "t3.large" // "t2.micro"
+  user_data_replace_on_change         = true
+  vpc_security_group_ids              = [aws_security_group.gitlab_sg.id, aws_security_group.allow_docker_ports.id]
+  subnet_id                           = element(data.aws_subnets.default.ids, 0)
+
+}
+
 # locals {
 #   gitlab_base_url = "https://${aws_eip.gitlab_eip.public_ip}/api/v4"
 # }

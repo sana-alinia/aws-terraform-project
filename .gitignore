@@ -27,5 +27,7 @@ override.tf.json
 terraform.rc
 .terraform.lock.hcl
 .pem
+**/.pem/*
 access_token.txt
-root_password.txt
+gitlab_root_password.txt
+jenkins_root_password.txt
