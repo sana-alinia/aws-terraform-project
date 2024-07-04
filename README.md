@@ -54,6 +54,128 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 - **Nexus**: Artifact repository management.
 - **Grafana**: Monitoring and observability.
 
+### Architecture Diagram Description
+
+1. **AWS VPC**:
+
+   - Contains three public subnets for high availability across different availability zones (eu-west-3a, eu-west-3b, eu-west-3c).
+
+2. **Subnets**:
+
+   - **Public Subnet 1**: Hosts GitLab.
+   - **Public Subnet 2**: Hosts Jenkins.
+   - **Public Subnet 3**: Hosts Nexus.
+
+3. **Security Groups**:
+
+   - **GitLab Security Group**: Allows traffic on ports 80, 443, and 22.
+   - **Jenkins Security Group**: Allows traffic on ports 8080 and 22.
+   - **Nexus Security Group**: Allows traffic on ports 8081 and 22.
+   - **Kubernetes Security Group**: Manages traffic for SonarQube and Grafana.
+
+4. **EC2 Instances**:
+
+   - **GitLab Server**: Deployed in Public Subnet 1.
+   - **Jenkins Server**: Deployed in Public Subnet 2.
+   - **Nexus Server**: Deployed in Public Subnet 3.
+
+5. **Kubernetes Cluster**:
+
+   - Manages containerized applications (SonarQube, Grafana, Nexus).
+
+6. **Load Balancers**:
+
+   - Manage external access to SonarQube, Grafana, and Nexus services.
+
+7. **Communication Flow**:
+   - **Developers** push code to **GitLab**.
+   - **GitLab** triggers **Jenkins** for CI/CD pipeline.
+   - **Jenkins** uses **SonarQube** for code quality analysis and **Nexus** for storing artifacts.
+   - **Grafana** monitors the entire system.
+
+```plaintext
+                                    +-------------------+
+                                    |       AWS VPC     |
+                                    |-------------------|
+                                    |                   |
+                 +------------------>    Internet       |
+                 |                  |                   |
+                 |                  +-------------------+
+                 |                           |
+                 |                           |
+                 |                           |
+        +--------v--------+        +---------v---------+        +---------v---------+
+        |   Public Subnet 1 |        |   Public Subnet 2 |        |   Public Subnet 3 |
+        |-------------------|        |-------------------|        |-------------------|
+        |                   |        |                   |        |                   |
+        |  +-------------+  |        |  +-------------+  |        |  +-------------+  |
+        |  |    GitLab   |  |        |  |   Jenkins   |  |        |  |    Nexus    |  |
+        |  +-------------+  |        |  +-------------+  |        |  +-------------+  |
+        |                   |        |                   |        |                   |
+        +--------+----------+        +---------+---------+        +---------+---------+
+                 |                           |                           |
+                 |                           |                           |
+                 |                           |                           |
+                 |                           |                           |
+                 |                           |                           |
+                 |                           |                           |
+         +-------v-------+           +-------v-------+           +-------v-------+
+         |  Kubernetes   |           |  Kubernetes   |           |  Kubernetes   |
+         |    Cluster    |           |    Cluster    |           |    Cluster    |
+         |---------------|           |---------------|           |---------------|
+         |               |           |               |           |               |
+         | +-----------+ |           | +-----------+ |           | +-----------+ |
+         | | SonarQube | |           | |  Grafana  | |           | |   Nexus   | |
+         | +-----------+ |           | +-----------+ |           | +-----------+ |
+         |               |           |               |           |               |
+         +-------+-------+           +-------+-------+           +-------+-------+
+                 |                           |                           |
+                 |                           |                           |
+         +-------v-------+           +-------v-------+           +-------v-------+
+         | Load Balancer |           | Load Balancer |           | Load Balancer |
+         +---------------+           +---------------+           +---------------+
+```
+
+### Architecture Diagram Explanation
+
+1. **AWS VPC**:
+
+   - The entire infrastructure is hosted within an AWS Virtual Private Cloud (VPC), ensuring a secure and isolated network environment.
+
+2. **Subnets**:
+
+   - **Public Subnet 1**: Hosts the GitLab server.
+   - **Public Subnet 2**: Hosts the Jenkins server.
+   - **Public Subnet 3**: Hosts the Nexus server.
+
+3. **Security Groups**:
+
+   - **GitLab Security Group**: Allows HTTP (80), HTTPS (443), and SSH (22) traffic.
+   - **Jenkins Security Group**: Allows traffic on ports 8080 and 22.
+   - **Nexus Security Group**: Allows traffic on ports 8081 and 22.
+   - **Kubernetes Security Group**: Manages traffic for SonarQube and Grafana, ensuring they are accessible and secure.
+
+4. **EC2 Instances**:
+
+   - **GitLab Server**: Deployed in Public Subnet 1. Manages source code and CI/CD pipelines.
+   - **Jenkins Server**: Deployed in Public Subnet 2. Automates builds, testing, and deployments.
+   - **Nexus Server**: Deployed in Public Subnet 3. Manages build artifacts and dependencies.
+
+5. **Kubernetes Cluster**:
+
+   - Hosts containerized applications such as SonarQube for code quality analysis and Grafana for monitoring. Nexus is also managed within the Kubernetes cluster for artifact repository management.
+
+6. **Load Balancers**:
+   - Load balancers ensure that SonarQube, Grafana, and Nexus services are accessible from the internet, distributing traffic and providing high availability.
+
+### Communication Flow
+
+- **Developers** push code changes to **GitLab**.
+- **GitLab** triggers the **Jenkins** pipeline for continuous integration and deployment.
+- **Jenkins** performs builds, and runs tests, and uses **SonarQube** for code quality analysis.
+- Build artifacts are stored in **Nexus**.
+- **Grafana** monitors the overall system health and performance, providing observability and insights.
+
 ## Getting Started
 
 ### Prerequisites
@@ -67,58 +189,58 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 
 1. **Clone the repository:**
 
-    ```bash
-    git clone <repository-url>
-    cd <repository-directory>
-    ```
+   ```bash
+   git clone <repository-url>
+   cd <repository-directory>
+   ```
 
 2. **Configure AWS and GitLab tokens:**
 
-    Ensure you have your AWS credentials and GitLab personal access token ready. Update the `variables.tf` file with your token path:
+   Ensure you have your AWS credentials and GitLab personal access token ready. Update the `variables.tf` file with your token path:
 
-    ```hcl
-    variable "gitlab_token_path" {
-      description = "The path to the file containing the GitLab personal access token"
-      type        = string
-      default     = "/path/to/your/gitlab/token"
-    }
-    ```
+   ```hcl
+   variable "gitlab_token_path" {
+     description = "The path to the file containing the GitLab personal access token"
+     type        = string
+     default     = "/path/to/your/gitlab/token"
+   }
+   ```
 
 3. **Modify `gitlab-values.yaml`:**
 
-    Update the `helm/gitlab-values.yaml` file with your domain and AWS ACM certificate ARN if applicable:
+   Update the `helm/gitlab-values.yaml` file with your domain and AWS ACM certificate ARN if applicable:
 
-    ```yaml
-    global:
-      hosts:
-        domain: gitlab.yourdomain.com
-      ingress:
-        configureCertmanager: false
-        annotations:
-          kubernetes.io/ingress.class: nginx
-        class: "nginx"
-        tls:
-          enabled: true
-          secretName: gitlab-cert
-          annotations:
-            service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "your-acm-certificate-arn"
-    ```
+   ```yaml
+   global:
+     hosts:
+       domain: gitlab.yourdomain.com
+     ingress:
+       configureCertmanager: false
+       annotations:
+         kubernetes.io/ingress.class: nginx
+       class: "nginx"
+       tls:
+         enabled: true
+         secretName: gitlab-cert
+         annotations:
+           service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "your-acm-certificate-arn"
+   ```
 
 ### Deployment
 
 1. **Initialize Terraform:**
 
-    ```bash
-    terraform init
-    ```
+   ```bash
+   terraform init
+   ```
 
 2. **Apply Terraform configuration:**
 
-    ```bash
-    terraform apply
-    ```
+   ```bash
+   terraform apply
+   ```
 
-    Confirm the apply action by typing `yes` when prompted. This will provision the necessary infrastructure and deploy the CI/CD tools.
+   Confirm the apply action by typing `yes` when prompted. This will provision the necessary infrastructure and deploy the CI/CD tools.
 
 ### Outputs
 
