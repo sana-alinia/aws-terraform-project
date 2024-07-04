@@ -1,232 +1,160 @@
+````markdown
+# AWS CI/CD Pipeline Deployment with Terraform
 
-## AWS CLI Configuration
+## Overview
 
-Ensure you have the AWS CLI installed and configured with the necessary credentials:
+This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. The pipeline integrates several tools including GitLab, SonarQube, Jenkins, Grafana, and Nexus, and automates the deployment of a simple "Hello World" Node.js application. The infrastructure is managed as code using Terraform, ensuring consistent and repeatable deployments.
 
-1. **Install AWS CLI**: Follow the [AWS CLI Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).
+## Project Structure
 
-2. **Configure AWS CLI**:
+```bash
+├── data-sources.tf
+├── helm
+│   └── gitlab-values.yaml
+├── k8s
+│   ├── grafana
+│   │   ├── grafana-deployment.yaml
+│   │   └── values.yaml
+│   ├── nexus
+│   │   ├── nexus-deployment.yaml
+│   │   └── values.yaml
+│   └── sonarqube
+│       ├── sonarqube-deployment.yaml
+│       └── values.yaml
+├── key_pair.tf
+├── main.tf
+├── modules
+│   └── gitlab-server
+│       ├── docker-containers.sh
+│       ├── main.tf
+│       ├── output.tf
+│       ├── public-key.pub
+│       └── variables.tf
+├── output.tf
+├── print-code.py
+├── security-group.tf
+├── subnet.tf
+└── variables.tf
+```
+````
 
-   ```sh
-   aws configure
+## Components
+
+### Infrastructure
+
+- **VPC**: Default VPC for isolated network environment.
+- **Subnets**: Three public subnets for high availability across different availability zones.
+- **Security Groups**: Configured for access control and traffic management.
+- **EC2 Instances**: Hosts for GitLab, Jenkins, and Nexus.
+- **Kubernetes**: Manages deployments for SonarQube, Grafana, and Nexus using Helm charts.
+
+### Tools
+
+- **GitLab**: Version control and CI/CD management.
+- **Jenkins**: Continuous integration and deployment.
+- **SonarQube**: Code quality analysis.
+- **Nexus**: Artifact repository management.
+- **Grafana**: Monitoring and observability.
+
+## Getting Started
+
+### Prerequisites
+
+- AWS account with appropriate permissions.
+- Terraform installed on your local machine.
+- SSH key pair for accessing EC2 instances.
+- GitLab personal access token.
+
+### Configuration
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone <repository-url>
+   cd <repository-directory>
    ```
 
-   Provide your AWS Access Key ID, Secret Access Key, default region name, and default output format when prompted.
+2. **Configure AWS and GitLab tokens:**
 
-## kubeconfig Configuration
+   Ensure you have your AWS credentials and GitLab personal access token ready. Update the `variables.tf` file with your token path:
 
-Update your `kubeconfig` to use your EKS cluster:
-
-```sh
-aws eks update-kubeconfig --name gitlab-eks --region eu-west-3
-```
-
-**Note**: This assumes that there is already an EKS cluster named `gitlab-eks` created on `default vpc`.  If not, you need to first run `terraform apply` or `terraform apply -target=module.eks`
-
-Verify the configuration:
-
-```sh
-kubectl get nodes
-```
-
-## Certificate Manager Settings
-
-Install Cert-Manager in your Kubernetes cluster to handle TLS certificates:
-
-1. **Install Cert-Manager**:
-
-   ```sh
-   kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.yaml --validate=false
+   ```hcl
+   variable "gitlab_token_path" {
+     description = "The path to the file containing the GitLab personal access token"
+     type        = string
+     default     = "/path/to/your/gitlab/token"
+   }
    ```
 
-2. **Create a ClusterIssuer for Let's Encrypt**:
+3. **Modify `gitlab-values.yaml`:**
 
-   Save the following as `cluster-issuer.yaml`:
+   Update the `helm/gitlab-values.yaml` file with your domain and AWS ACM certificate ARN if applicable:
 
    ```yaml
-   apiVersion: cert-manager.io/v1
-   kind: ClusterIssuer
-   metadata:
-     name: letsencrypt-prod
-   spec:
-     acme:
-       server: https://acme-v02.api.letsencrypt.org/directory
-       email: your-email@example.com
-       privateKeySecretRef:
-         name: letsencrypt-prod
-       solvers:
-       - http01:
-           ingress:
-             class: nginx
+   global:
+     hosts:
+       domain: gitlab.yourdomain.com
+     ingress:
+       configureCertmanager: false
+       annotations:
+         kubernetes.io/ingress.class: nginx
+       class: "nginx"
+       tls:
+         enabled: true
+         secretName: gitlab-cert
+         annotations:
+           service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "your-acm-certificate-arn"
    ```
 
-   Apply the configuration:
+### Deployment
 
-   ```sh
-   kubectl apply -f cluster-issuer.yaml
-   ```
+1. **Initialize Terraform:**
 
-## DNS Settings and Testing
-
-1. **Configure Route 53 DNS**:
-
-   - Navigate to Route 53 in the AWS Console.
-   - Select your hosted zone for `aliniacoding.com`.
-   - Create a new A record:
-     - **Name**: `gitlab`
-     - **Type**: A
-     - **Value**: Public IP address of your GitLab instance (`aws_eip.gitlab_eip.public_ip`).
-
-2. **Verify DNS Resolution**:
-
-   From your local machine:
-
-   ```sh
-   nslookup gitlab.aliniacoding.com
-   ```
-
-   From within the Kubernetes cluster:
-
-   ```sh
-   kubectl run -it --rm --image=alpine dns-test -- sh
-   nslookup gitlab.aliniacoding.com
-   ```
-
-## Route 53 Notes
-
-- Ensure that the A record for `gitlab.aliniacoding.com` correctly points to the public IP address assigned to your GitLab instance.
-- Verify that your domain and DNS settings propagate correctly.
-
-## Other Important Things for Developers
-
-- **Helm Provider Configuration**: Ensure that the Helm provider in Terraform is correctly configured with the EKS cluster endpoint and authentication token.
-
-  Example `provider.tf`:
-
-  ```hcl
-  data "aws_eks_cluster" "cluster" {
-    name = module.eks.cluster_name
-  }
-
-  data "aws_eks_cluster_auth" "cluster" {
-    name = module.eks.cluster_name
-  }
-
-  provider "kubernetes" {
-    host                   = data.aws_eks_cluster.cluster.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
-    token                  = data.aws_eks_cluster_auth.cluster.token
-  }
-
-  provider "helm" {
-    kubernetes {
-      host                   = data.aws_eks_cluster.cluster.endpoint
-      cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
-      token                  = data.aws_eks_cluster_auth.cluster.token
-    }
-  }
-
-  terraform {
-    required_providers {
-      aws = {
-        source  = "hashicorp/aws"
-        version = "~> 5.47.0"
-      }
-      kubernetes = {
-        source  = "hashicorp/kubernetes"
-        version = "~> 2.0"
-      }
-      helm = {
-        source  = "hashicorp/helm"
-        version = "~> 2.0"
-      }
-    }
-
-    required_version = "~> 1.3"
-  }
-  ```
-
-- **PostgreSQL Configuration**: Ensure the PostgreSQL version matches the initialized data directory. Update the `postgresql.image.tag` in the Helm release configuration if necessary.
-
-- **Deployment Verification**: After applying the Terraform configuration, verify the status of the GitLab pods and check their logs for any issues.
-
-  ```sh
-  kubectl get pods -n default
-  kubectl logs gitlab-postgresql-0
-  kubectl logs gitlab-gitlab-runner-d8c5ff4f4-mrs6d
-  ```
-
-By following these steps and configurations, you should be able to deploy GitLab successfully using Terraform and Helm.
-
-# Launch a hello world app on your EC2 instance
-
-To launch a "Hello World" web application on your domain `www.aliniacoding.com` using AWS services, you'll need to set up a few components: a web server to host your application, and potentially a deployment mechanism to manage your code. Below is a step-by-step guide on how to do this using Amazon EC2 (Elastic Compute Cloud) for the server and Route 53 for DNS management:
-
-### Step 1: Set up an EC2 Instance
-1. **Log in to the AWS Management Console** and navigate to the EC2 dashboard.
-2. **Launch a new EC2 instance**:
-   - Choose an appropriate Amazon Machine Image (AMI), such as Amazon Linux 2 or Ubuntu.
-   - Select an instance type (e.g., `t2.micro`, which is eligible for the free tier).
-   - Configure instance details as per your requirement, setting the correct VPC and subnet.
-   - Add storage if the default isn’t sufficient.
-   - Configure a security group to allow HTTP (port 80) and HTTPS (port 443) traffic, as well as SSH (port 22) for remote access.
-   - Review and launch the instance, creating or selecting an existing key pair for SSH access.
-
-### Step 2: Install Web Server Software
-After setting up your instance, you need to install web server software. Here's how to do it for a basic "Hello World" application using Nginx and Node.js:
-1. **Connect to your instance via SSH** using the key pair you selected or created during the setup.
    ```bash
-   ssh -i "your-key-pair.pem" ec2-user@your-instance-public-dns.amazonaws.com
+   terraform init
    ```
-2. **Update your package manager** and install Nginx:
+
+2. **Apply Terraform configuration:**
+
    ```bash
-   sudo yum update -y  # For Amazon Linux or CentOS
-   sudo apt update && sudo apt upgrade -y  # For Ubuntu
-   sudo yum install nginx -y  # For Amazon Linux or CentOS
-   sudo apt install nginx -y  # For Ubuntu
+   terraform apply
    ```
-3. **Start the Nginx service** and ensure it runs on boot:
-   ```bash
-   sudo systemctl start nginx
-   sudo systemctl enable nginx
-   ```
-4. **Install Node.js** (optional, if you are planning to run a Node.js app):
-   ```bash
-   curl -sL https://rpm.nodesource.com/setup_14.x | sudo bash -
-   sudo yum install nodejs -y  # For Amazon Linux or CentOS
-   sudo apt install nodejs -y  # For Ubuntu
-   ```
-5. **Create your web application**:
-   - For a simple static HTML site, you can edit the default Nginx root document located at `/usr/share/nginx/html/index.html`.
-   - For a Node.js app, create a new directory, initialize a Node.js project, and write your app.
 
-### Step 3: Configure DNS
-1. **Return to the Route 53 console** and navigate to your hosted zone.
-2. **Create or ensure that an A record exists** pointing to the Elastic IP or public IP of your EC2 instance:
-   - Name: `www`
-   - Type: A – IPv4 address
-   - Value: `<Your-EC2-instance's-public-IP>`
+   Confirm the apply action by typing `yes` when prompted. This will provision the necessary infrastructure and deploy the CI/CD tools.
 
-### Step 4: Test Your Website
-- After setting everything up and DNS records have propagated, open a web browser and go to `http://www.aliniacoding.com`. You should see your "Hello World" page.
+### Outputs
 
-This guide gives you a basic setup. Depending on your requirements, you might want to explore additional AWS services or configurations, like Elastic Load Balancing, Auto Scaling, AWS Lambda for serverless deployments, or Amazon S3 for static website hosting if you do not require server-side processing.
+After successful deployment, Terraform will output essential information such as:
 
-# Useful commands
+- GitLab server IP address
+- Instance IDs and public IPs
+- AWS region
+- Subnet IDs
+- GitLab root password
+- Jenkins root password
 
-```
-kubectl get ingress 
-ws acm describe-certificate --certificate-arn arn:aws:acm:eu-west-3:849749410199:certificate/11f46391-2fb0-4d5b-b725-65f4ea4a4339
-aws route53 list-resource-record-sets --hosted-zone-id Z01685731FU9J0R5WRRX1  
-```
+These outputs can be found in the `output.tf` file and will be displayed in the terminal.
 
-# Troubleshoot
+## Challenges and Solutions
 
-## Getting Gitlab root password
+### Challenges
 
-```
-# ssh to EC2 machine
-docker ps
-docker exec -it CONTAINER_ID cat /etc/gitlab/initial_root_password
+- **Resource Dependencies**: Managing the order of resource creation.
+- **Networking Issues**: Configuring subnets and security groups.
+- **Integration Issues**: Ensuring seamless operation of all tools.
+- **Provisioning Delays**: Long setup times for instances and Kubernetes.
 
-```
+### Solutions
+
+- **Resource Dependencies**: Used Terraform's `depends_on` to manage order.
+- **Networking Issues**: Carefully planned subnet CIDR blocks and security group rules.
+- **Integration Issues**: Thorough testing and configuration adjustments.
+- **Provisioning Delays**: Used optimized AMIs and efficient provisioning scripts.
+
+## Conclusion
+
+This project successfully deploys a CI/CD pipeline in AWS using Terraform, integrating GitLab, Jenkins, SonarQube, Nexus, and Grafana. The setup automates the deployment process, improves code quality, and provides comprehensive monitoring. Future improvements could include further automation and scaling enhancements.
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
