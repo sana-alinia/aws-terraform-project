@@ -67,58 +67,58 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 
 1. **Clone the repository:**
 
-   ```bash
-   git clone <repository-url>
-   cd <repository-directory>
-   ```
+    ```bash
+    git clone <repository-url>
+    cd <repository-directory>
+    ```
 
 2. **Configure AWS and GitLab tokens:**
 
-   Ensure you have your AWS credentials and GitLab personal access token ready. Update the `variables.tf` file with your token path:
+    Ensure you have your AWS credentials and GitLab personal access token ready. Update the `variables.tf` file with your token path:
 
-   ```hcl
-   variable "gitlab_token_path" {
-     description = "The path to the file containing the GitLab personal access token"
-     type        = string
-     default     = "/path/to/your/gitlab/token"
-   }
-   ```
+    ```hcl
+    variable "gitlab_token_path" {
+      description = "The path to the file containing the GitLab personal access token"
+      type        = string
+      default     = "/path/to/your/gitlab/token"
+    }
+    ```
 
 3. **Modify `gitlab-values.yaml`:**
 
-   Update the `helm/gitlab-values.yaml` file with your domain and AWS ACM certificate ARN if applicable:
+    Update the `helm/gitlab-values.yaml` file with your domain and AWS ACM certificate ARN if applicable:
 
-   ```yaml
-   global:
-     hosts:
-       domain: gitlab.yourdomain.com
-     ingress:
-       configureCertmanager: false
-       annotations:
-         kubernetes.io/ingress.class: nginx
-       class: "nginx"
-       tls:
-         enabled: true
-         secretName: gitlab-cert
-         annotations:
-           service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "your-acm-certificate-arn"
-   ```
+    ```yaml
+    global:
+      hosts:
+        domain: gitlab.yourdomain.com
+      ingress:
+        configureCertmanager: false
+        annotations:
+          kubernetes.io/ingress.class: nginx
+        class: "nginx"
+        tls:
+          enabled: true
+          secretName: gitlab-cert
+          annotations:
+            service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "your-acm-certificate-arn"
+    ```
 
 ### Deployment
 
 1. **Initialize Terraform:**
 
-   ```bash
-   terraform init
-   ```
+    ```bash
+    terraform init
+    ```
 
 2. **Apply Terraform configuration:**
 
-   ```bash
-   terraform apply
-   ```
+    ```bash
+    terraform apply
+    ```
 
-   Confirm the apply action by typing `yes` when prompted. This will provision the necessary infrastructure and deploy the CI/CD tools.
+    Confirm the apply action by typing `yes` when prompted. This will provision the necessary infrastructure and deploy the CI/CD tools.
 
 ### Outputs
 
@@ -133,6 +133,38 @@ After successful deployment, Terraform will output essential information such as
 
 These outputs can be found in the `output.tf` file and will be displayed in the terminal.
 
+## Tools Overview
+
+### GitLab
+
+- **Role**: Manages source code and CI/CD pipelines.
+- **Deployment**: Provisioned on an EC2 instance with Docker.
+- **Configuration**: Accessible via the public IP provided in the Terraform output.
+
+### Jenkins
+
+- **Role**: Automates builds, testing, and deployments.
+- **Deployment**: Runs in a Docker container on an EC2 instance.
+- **Configuration**: Configured to trigger builds based on GitLab changes.
+
+### SonarQube
+
+- **Role**: Performs static code analysis to ensure code quality.
+- **Deployment**: Deployed on a Kubernetes cluster.
+- **Configuration**: Accessible via a LoadBalancer service.
+
+### Nexus
+
+- **Role**: Manages build artifacts and dependencies.
+- **Deployment**: Deployed on a Kubernetes cluster.
+- **Configuration**: Accessible via a LoadBalancer service.
+
+### Grafana
+
+- **Role**: Provides monitoring and observability.
+- **Deployment**: Deployed on a Kubernetes cluster.
+- **Configuration**: Accessible via a LoadBalancer service.
+
 ## Challenges and Solutions
 
 ### Challenges
@@ -145,7 +177,7 @@ These outputs can be found in the `output.tf` file and will be displayed in the 
 ### Solutions
 
 - **Resource Dependencies**: Used Terraform's `depends_on` to manage order.
-- **Networking Issues**: Carefully planned subnet CIDR blocks and security group rules.
+- **Networking Issues**: Carefully planned subnet CIDR blocks and configuring security group rules appropriately.
 - **Integration Issues**: Thorough testing and configuration adjustments.
 - **Provisioning Delays**: Used optimized AMIs and efficient provisioning scripts.
 
