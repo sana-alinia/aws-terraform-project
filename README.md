@@ -35,7 +35,6 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 ├── subnet.tf
 └── variables.tf
 ```
-````
 
 ## Components
 
