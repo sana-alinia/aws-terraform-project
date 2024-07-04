@@ -1,4 +1,3 @@
-````markdown
 # AWS CI/CD Pipeline Deployment with Terraform
 
 ## Overview
