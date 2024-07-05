@@ -6,31 +6,28 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 
 ## Project Structure
 
-```bash
+```Terraform (Dossier aws-terraform-project-master)
 ├── data-sources.tf
-├── helm
-│   └── gitlab-values.yaml
-├── k8s
+├── EC2 (Instance.tf)
 │   ├── grafana
-│   │   ├── grafana-deployment.yaml
-│   │   └── values.yaml
+│       │ ────── grafana-resource.tf
+│       │ ────── install-grafana.sh
 │   ├── nexus
-│   │   ├── nexus-deployment.yaml
-│   │   └── values.yaml
-│   └── sonarqube
-│       ├── sonarqube-deployment.yaml
-│       └── values.yaml
-├── key_pair.tf
+│       │ ──────  nexus-resource.tf
+│       │ ────── install-nexus.sh
+│   ├── sonarqube
+│       │ ────── sonarqube-resource.tf
+│       │ ────── install-sonarqube.sh
+│   ├── GitLab_Server
+│       │ ────── gitlab-resource.tf
+│       │ ────── 
+│   ├── Jenkins
+│        │ ────── jenkins-resource.tf
+│        │ ────── install-jenkins.sh
+├── key_pair.tf (to connect to VMs to upload scripts and run bash cmd)
 ├── main.tf
-├── modules
-│   └── gitlab-server
-│       ├── docker-containers.sh
-│       ├── main.tf
-│       ├── output.tf
-│       ├── public-key.pub
-│       └── variables.tf
+├── modules 
 ├── output.tf
-├── print-code.py
 ├── security-group.tf
 ├── subnet.tf
 └── variables.tf
@@ -62,30 +59,31 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 
 2. **Subnets**:
 
-   - **Public Subnet 1**: Hosts GitLab.
-   - **Public Subnet 2**: Hosts Jenkins.
-   - **Public Subnet 3**: Hosts Nexus.
+   - **Public Subnet 1**: Hosts Jenkins, Nexus, SonarQube, Grafana.
+   - **Public Subnet 2**: Hosts GitLab .
+   
 
 3. **Security Groups**:
 
-   - **GitLab Security Group**: Allows traffic on ports 80, 443, and 22.
+   - **GitLab Security Group**: Allows traffic on ports 80 or gitlab.veyagroupe.com.
    - **Jenkins Security Group**: Allows traffic on ports 8080 and 22.
    - **Nexus Security Group**: Allows traffic on ports 8081 and 22.
-   - **Kubernetes Security Group**: Manages traffic for SonarQube and Grafana.
+   - **SonarQube Security Group** : Allows traffic on ports 9000 and 22
+   - **Grafana Security Group** : Allows traffic on ports 3000 and 22, **Prometeus on GitLab** : Allows traffic on ports 3000 and 22
 
 4. **EC2 Instances**:
 
-   - **GitLab Server**: Deployed in Public Subnet 1.
-   - **Jenkins Server**: Deployed in Public Subnet 2.
-   - **Nexus Server**: Deployed in Public Subnet 3.
+   - **Jenkins Nexus, SonarQube, Grafana Servers**: Deployed in Public Subnet 1.
+   - **GitLab Server**: Deployed in Public Subnet 2.
+
 
 5. **Kubernetes Cluster**:
 
-   - Manages containerized applications (SonarQube, Grafana, Nexus).
+   - Manages containerized applications for the web site
 
 6. **Load Balancers**:
 
-   - Manage external access to SonarQube, Grafana, and Nexus services.
+   - Manage external access to web site.
 
 7. **Communication Flow**:
    - **Developers** push code to **GitLab**.
@@ -104,36 +102,32 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
                  |                           |
                  |                           |
                  |                           |
-        +--------v--------+        +---------v---------+        +---------v---------+
-        |   Public Subnet 1 |        |   Public Subnet 2 |        |   Public Subnet 3 |
+        +--------v--------+          +---------v---------+        +---------v---------+
+        |   Public Subnet 2 |        |   Public Subnet 1 |        |   Public Subnet 1 |
         |-------------------|        |-------------------|        |-------------------|
         |                   |        |                   |        |                   |
         |  +-------------+  |        |  +-------------+  |        |  +-------------+  |
-        |  |    GitLab   |  |        |  |   Jenkins   |  |        |  |    Nexus    |  |
+        |  |    GitLab   |  |        |  |   Jenkins   |  |        |  |Nexus,Grafana,Sonarqube    
         |  +-------------+  |        |  +-------------+  |        |  +-------------+  |
         |                   |        |                   |        |                   |
         +--------+----------+        +---------+---------+        +---------+---------+
-                 |                           |                           |
-                 |                           |                           |
-                 |                           |                           |
-                 |                           |                           |
-                 |                           |                           |
-                 |                           |                           |
-         +-------v-------+           +-------v-------+           +-------v-------+
-         |  Kubernetes   |           |  Kubernetes   |           |  Kubernetes   |
-         |    Cluster    |           |    Cluster    |           |    Cluster    |
-         |---------------|           |---------------|           |---------------|
-         |               |           |               |           |               |
-         | +-----------+ |           | +-----------+ |           | +-----------+ |
-         | | SonarQube | |           | |  Grafana  | |           | |   Nexus   | |
-         | +-----------+ |           | +-----------+ |           | +-----------+ |
-         |               |           |               |           |               |
-         +-------+-------+           +-------+-------+           +-------+-------+
-                 |                           |                           |
-                 |                           |                           |
-         +-------v-------+           +-------v-------+           +-------v-------+
-         | Load Balancer |           | Load Balancer |           | Load Balancer |
-         +---------------+           +---------------+           +---------------+
+                                            |                          
+                                            |                          
+                                            |                          
+                                            |                          
+                                            |                           
+                                            |                           
+                                      +-------v-------+          
+                                      |  Kubernetes   |          
+                                      | |  SiteWeb  | |           
+                                      | +-----------+ |           
+                                      |               |                          
+                                      +-------+-------+                                                                                 
+                                            |
+                                            |                           
+                                      +-------v-------+           
+                                      | Load Balancer |           
+                                      +---------------+           
 ```
 
 ### Architecture Diagram Explanation
@@ -144,22 +138,26 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 
 2. **Subnets**:
 
-   - **Public Subnet 1**: Hosts the GitLab server.
-   - **Public Subnet 2**: Hosts the Jenkins server.
-   - **Public Subnet 3**: Hosts the Nexus server.
+   - **Public Subnet 1**: Hosts Jenkins, Nexus, SonarQube, Grafana.
+   - **Public Subnet 2**: Hosts GitLab .
 
 3. **Security Groups**:
 
-   - **GitLab Security Group**: Allows HTTP (80), HTTPS (443), and SSH (22) traffic.
+   - **GitLab Security Group**: Allows traffic on ports 80 or gitlab.veyagroupe.com.
    - **Jenkins Security Group**: Allows traffic on ports 8080 and 22.
    - **Nexus Security Group**: Allows traffic on ports 8081 and 22.
-   - **Kubernetes Security Group**: Manages traffic for SonarQube and Grafana, ensuring they are accessible and secure.
-
+   - **SonarQube Security Group** : Allows traffic on ports 9000 and 22
+   - **Grafana Security Group** : Allows traffic on ports 3000 and 22, **Prometeus on GitLab** : Allows traffic on ports 3000 and 22
+     
 4. **EC2 Instances**:
 
-   - **GitLab Server**: Deployed in Public Subnet 1. Manages source code and CI/CD pipelines.
-   - **Jenkins Server**: Deployed in Public Subnet 2. Automates builds, testing, and deployments.
+   - **GitLab Server**: Deployed in Public Subnet 2. Manages source code and CI/CD pipelines.
+   - **Jenkins Server**: Deployed in Public Subnet 1. Automates builds, testing, and deployments.
    - **Nexus Server**: Deployed in Public Subnet 3. Manages build artifacts and dependencies.
+   - **Grafana** monitors the overall system health and performance, providing observability and insights.
+   - **Sonarqube** Manage and analyse the qualitu of the code.
+
+
 
 5. **Kubernetes Cluster**:
 
@@ -175,6 +173,8 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 - **Jenkins** performs builds, and runs tests, and uses **SonarQube** for code quality analysis.
 - Build artifacts are stored in **Nexus**.
 - **Grafana** monitors the overall system health and performance, providing observability and insights.
+- **Sonarqube** Manage and analyse the qualitu of the code.
+
 
 ## Getting Started
 
@@ -190,8 +190,12 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 1. **Clone the repository:**
 
    ```bash
-   git clone <repository-url>
-   cd <repository-directory>
+   git clone http://gitlab.veyagroupe.com/root/sanavenunye.git
+   cd project_sanavenunye\sanavenunye
+   git add .
+   git commit -m "name_of_changement"
+   git push -u origin main
+   
    ```
 
 2. **Configure AWS and GitLab tokens:**
@@ -206,25 +210,6 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
    }
    ```
 
-3. **Modify `gitlab-values.yaml`:**
-
-   Update the `helm/gitlab-values.yaml` file with your domain and AWS ACM certificate ARN if applicable:
-
-   ```yaml
-   global:
-     hosts:
-       domain: gitlab.yourdomain.com
-     ingress:
-       configureCertmanager: false
-       annotations:
-         kubernetes.io/ingress.class: nginx
-       class: "nginx"
-       tls:
-         enabled: true
-         secretName: gitlab-cert
-         annotations:
-           service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "your-acm-certificate-arn"
-   ```
 
 ### Deployment
 
