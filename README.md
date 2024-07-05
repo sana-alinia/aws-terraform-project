@@ -25,8 +25,7 @@ This project aims to deploy a complete CI/CD pipeline in AWS using Terraform. Th
 │        │ ────── jenkins-resource.tf
 │        │ ────── install-jenkins.sh
 ├── key_pair.tf (to connect to VMs to upload scripts and run bash cmd)
-├── main.tf
-├── modules 
+├── main.tf 
 ├── output.tf
 ├── security-group.tf
 ├── subnet.tf
